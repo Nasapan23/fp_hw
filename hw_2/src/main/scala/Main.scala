@@ -68,26 +68,57 @@ object Main {
 
   /* Split the text into chunks */
   def split(text: List[Char]): List[List[Char]] = {
-    def aux(text: List[Char]): List[List[Char]] = ???
+    def aux(text: List[Char]): List[List[Char]] = text match {
+      case Nil =>
+        // capăt de listă -> întoarcem un chunk gol
+        List(Nil)
 
-    // if we have only void chunks, we return the empty list
+      case ' ' :: xs =>
+        val chunks = aux(xs)
+        chunks match {
+          case Nil => List(Nil)
+          case h :: t =>
+            if (h == Nil) chunks // deja eram între cuvinte
+            else Nil :: chunks // începem un cuvânt nou
+        }
+
+      case c :: xs =>
+        val chunks = aux(xs)
+        chunks match {
+          case Nil => List(List(c))
+          case head :: tail => (c :: head) :: tail // adaugăm caracterul la cuvântul curent
+        }
+    }
+
     val l = aux(text)
-    if (l == List(Nil)) Nil
-    else l
+    if (l == List(Nil)) Nil else l
   }
+
 
   /* compute the frequency of each chunk */
   def computeTokens(words: List[String]): List[Token] = {
     /* insert a new string in a list of tokens */
-    def insWord(s: String, acc: List[Token]): List[Token] = ???
-
+    def insWord(s: String, acc: List[Token]): List[Token] = acc match {
+      case Nil => List(Token(s,1))
+      case Token(w,f) :: tail =>
+        if (w == s) {
+          Token(w,f+1) :: tail
+        }
+        else Token(w,f) :: insWord(s,tail)
+    }
     /* tail-recursive implementation of the list of tokens */
-    def aux(rest: List[String], acc: List[Token]): List[Token] = ???
-
-    ???
+    def aux(rest: List[String], acc: List[Token]): List[Token] = rest match {
+      case Nil => acc
+      case w::ws => aux(ws, insWord(w,acc))
+    }
+    aux(words, Nil)
   }
 
-  def tokensToTree(tokens: List[Token]): WTree = ???
+  def tokensToTree(tokens: List[Token]): WTree = {
+    tokens.foldLeft(Empty:WTree)((tree,token)=>{
+      tree.ins(token)
+    })
+  }
 
   /* Using the previous function, which builds a tree from a list of tokens,
   *  write a function which takes a string,
@@ -98,13 +129,29 @@ object Main {
   *  andThen.
   * */
 
-  def makeTree(s:String): WTree = ???
+  def makeTree(s: String): WTree = {
+    val chars: List[Char] = s.toList
+    val chunks: List[List[Char]] = split(chars)
+    val words: List[String] = chunks.map(_.mkString)
+    val tokens: List[Token] = computeTokens(words)
+    val tree: WTree = tokensToTree(tokens)
+
+    tree
+  }
 
   /* build a tree with the words and frequencies from the text in the scalaDescription text */
-  def wordSet: WTree = ???
+  def wordSet: WTree = {
+    makeTree(scalaDescription)
+  }
 
   /* find the number of occurrences of the keyword "Scala" in the scalaDescription text */
-  def scalaFreq: Int = ???
+  def scalaFreq: Int = {
+    val filtered= wordSet.filter(_.word == "Scala")
+    filtered match {
+      case Empty => 0
+      case Node(token, _, _) => token.freq
+    }
+  }
 
   /* find how many programming languages are referenced in the text.
      A PL is a keyword which starts with an uppercase
@@ -112,11 +159,15 @@ object Main {
      also use the function isUpper
 
   */
-  def progLang: Int = ???
+  def progLang: Int = {
+    wordSet.filter(_.word(0).isUpper).size
+  }
 
   /* find how many words which are not prepositions or conjunctions appear in the text (any word whose size is larger than 3). */
 
-  def wordCount : Int = ???
+  def wordCount : Int = {
+    wordSet.filter(x => x.word.length > 3).size
+  }
   
 
 }
